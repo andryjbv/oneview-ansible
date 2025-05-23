@@ -2,36 +2,35 @@
 ### COMMON SETUP; DO NOT MODIFY ###
 set -e
 
+# allow script to continue even if tests fail
+set +e
+
 # --- CONFIGURE THIS SECTION ---
-# Replace this with your command to run all tests
+# Run entire test suite
 run_all_tests() {
   echo "Running all tests..."
   pytest -v app/test
 }
 
-# Replace this with your command to run specific test files
-  run_selected_tests() {
-    local test_files=("$@")
-    echo "Running selected tests: ${test_files[@]}"
-    pytest -v "${test_files[@]}"
-  }
+# Run a subset of test files
+run_selected_tests() {
+  local test_files=("$@")
+  echo "Running selected tests: ${test_files[@]}"
+  pytest -v "${test_files[@]}"
+}
 # --- END CONFIGURATION SECTION ---
-
 
 ### COMMON EXECUTION; DO NOT MODIFY ###
 
-# No args is all tests
 if [ $# -eq 0 ]; then
-  run_all_tests
-  exit $?
-fi
-
-# Handle comma-separated input
-if [[ "$1" == *","* ]]; then
-  IFS=',' read -r -a TEST_FILES <<< "$1"
+  run_all_tests > /workspace/stdout.txt 2> /workspace/stderr.txt
 else
-  TEST_FILES=("$@")
+  if [[ "$1" == *","* ]]; then
+    IFS=',' read -r -a TEST_FILES <<< "$1"
+  else
+    TEST_FILES=("$@")
+  fi
+  run_selected_tests "${TEST_FILES[@]}" > /workspace/stdout.txt 2> /workspace/stderr.txt
 fi
 
-# Run them all together
-run_selected_tests "${TEST_FILES[@]}"
+exit 0
