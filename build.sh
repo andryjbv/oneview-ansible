@@ -9,11 +9,11 @@ set -e
 ###############################################
 # TODO: Install project dependencies if needed based on relevant config/lock files in the repo.
 # Note that we are developing the project, even if dependencies have been installed before, we need to install again to accommodate the changes we made.
-python -m pip install --no-cache-dir -r app/requirements.txt
-python -m pip install --no-cache-dir -r app/test_requirements.txt
+python -m pip install --no-cache-dir -r requirements.txt
+python -m pip install --no-cache-dir -r test_requirements.txt
 
-export ANSIBLE_LIBRARY=/app/app/library
-export ANSIBLE_MODULE_UTILS=/app/app/library/module_utils
+export ANSIBLE_LIBRARY=/app/library
+export ANSIBLE_MODULE_UTILS=/app/library/module_utils
 
 ###############################################
 # BUILD
