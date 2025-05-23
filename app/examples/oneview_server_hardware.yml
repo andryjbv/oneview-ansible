@@ -1,0 +1,172 @@
+###
+# Copyright (2016-2020) Hewlett Packard Enterprise Development LP
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License..
+###
+
+---
+- hosts: all
+  vars:
+    config: "{{ playbook_dir }}/oneview_config.json"
+    contents: "{{lookup('file', config)}}"
+    variant: 'Synergy'
+    multiple_hosts:
+      - "{{ contents.server_hardware_hostname }}"
+  tasks:
+    - name: Gather facts about all Scopes
+      oneview_scope_facts:
+        config: "{{ config }}"
+      delegate_to: localhost
+
+    - name: Add a Server Hardware
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: present
+        data:
+             hostname : '{{ contents.server_hardware_hostname }}'
+             username : '{{ contents.server_hardware_username }}'
+             password : '{{ contents.server_hardware_password }}'
+             force : false
+             licensingIntent: "OneView"
+             configurationState: "Managed"
+             initialScopeUris: 
+              - "{{ scopes[0]['uri'] }}" #Supported only with OneView API version >= 600.
+      delegate_to: localhost
+      when: variant == 'C7000'
+
+    - name: Do nothing when the server hardware is already present
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: present
+        data:
+             hostname : '{{ contents.server_hardware_hostname }}'
+             username : '{{ contents.server_hardware_username }}'
+             password : '{{ contents.server_hardware_password }}'
+             force : false
+             licensingIntent: "OneView"
+             configurationState: "Managed"
+      delegate_to: localhost
+      when: variant == 'C7000'
+
+    #This task available only with OneView API version >= 600.
+    - name: Add multiple rack-mount servers
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: multiple_servers_added
+        data:
+             mpHostsAndRanges : "{{ multiple_hosts }}"
+             username : "{{ contents.server_hardware_username }}"
+             password : "{{ contents.server_hardware_password }}"
+             initialScopeUris: 
+              - "{{ scopes[0]['uri'] }}"
+             licensingIntent: "OneView"
+             configurationState: "Managed"
+      delegate_to: localhost
+      when: variant == 'C7000'
+
+    - name: Gather facts about all Server Hardwares
+      oneview_server_hardware_facts:
+        config: "{{ config }}"
+      delegate_to: localhost
+
+    - debug: var=server_hardwares
+
+
+    - name: Power Off the server hardware
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: power_state_set
+        data:
+            name : "{{ server_hardwares[0]['name'] }}"
+            powerStateData:
+                powerState: "Off"
+                powerControl: "MomentaryPress"
+      delegate_to: localhost
+
+    - name: Power On the server hardware
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: power_state_set
+        data:
+            name : "{{ server_hardwares[0]['name'] }}"
+            powerStateData:
+                powerState: "On"
+                powerControl: "MomentaryPress"
+      delegate_to: localhost
+
+    - name: Refresh the server hardware
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: refresh_state_set
+        data:
+            name : "{{ server_hardwares[0]['name'] }}"
+            refreshStateData:
+                refreshState : "RefreshPending"
+      delegate_to: localhost
+
+    - name: Update the Server Hardware iLO firmware version
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: ilo_firmware_version_updated
+        data:
+            name : "{{ server_hardwares[0]['name'] }}"
+      delegate_to: localhost
+
+    - name: Reset the Server Hardware iLO State
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: ilo_state_reset
+        data:
+            name: "{{ server_hardwares[0]['name'] }}"
+      delegate_to: localhost
+
+    - name: Set the server UID state off
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: uid_state_off
+        data:
+            name: "{{ server_hardwares[0]['name'] }}"
+      delegate_to: localhost
+
+    - name: Enable Server Maintenance Mode
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: enable_maintenance_mode
+        data:
+            name: "{{ server_hardwares[0]['name'] }}"
+      delegate_to: localhost
+                           
+    - name: Disable Server Maintenance Mode
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: disable_maintenance_mode
+        data:
+            name: "{{ server_hardwares[0]['name'] }}"
+      delegate_to: localhost
+
+    # Commenting below tasks to ensure continuity for automation script
+    # - name: Remove the server hardware by its IP
+    #   oneview_server_hardware:
+    #     config: "{{ config }}"
+    #     state: absent
+    #     data:
+    #         name : '{{ contents.server_hardware_hostname }}'
+    #   delegate_to: localhost
+
+    # - name: Do nothing when the server hardware is already removed
+    #   oneview_server_hardware:
+    #     config: "{{ config }}"
+    #     state: absent
+    #     data:
+    #         name : '{{ contents.server_hardware_hostname }}'
+    #   delegate_to: localhost

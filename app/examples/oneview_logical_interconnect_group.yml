@@ -1,0 +1,380 @@
+###
+# Copyright (2016-2021) Hewlett Packard Enterprise Development LP
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###
+# NOTE: This playbook performs operations for Synergy 3 Enclosure Setup.
+---
+- hosts: all
+  vars:
+    config: "{{ playbook_dir }}/oneview_config.json"
+    contents: "{{lookup('file', config)}}"
+    # Inform the permitted Interconnect Type URI to configure Interconnect Map
+    permitted_interconnect_type_name_1: 'Virtual Connect SE 40Gb F8 Module for Synergy'
+    permitted_interconnect_type_name_2: 'Synergy 20Gb Interconnect Link Module'
+    scope_uris:
+      - '/rest/scopes/c7cab507-b49a-422d-9765-aff784112092'
+      - '/rest/scopes/db5cc22d-7be5-427f-ad88-22017fad2a61'
+  tasks:
+    - name: Get currentVersion from URL
+      oneview_version_facts:
+        config: "{{ config }}" 
+      delegate_to: localhost
+      when: contents.api_version|length == 0
+      register: version
+   
+    - name: Print currentVersion if an apiVersion is not specified in config file
+      set_fact: 
+        currentVersion: "{{ version.ansible_facts.version.currentVersion | int }}"
+      when: contents.api_version|length == 0
+
+    - name: Print currentVersion if api version is specified in config file
+      set_fact: 
+        currentVersion: contents.api_version | string
+      when: contents.api_version|length != 0
+
+    # Below task creates a Logical Interconnect Group with Interconnects, InternalNetworks, upLinkPorts, uplinkSets containing EthernetNetworks
+    - name: Create a Logical Interconnect Group
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: '{{ item.name }}'
+          enclosureType: 'SY12000'
+          internalNetworkNames:
+            - 'TestNetwork_3'
+          uplinkSets: 
+            - name: 'e23 uplink set'
+              mode: 'Auto'
+              networkType: 'Ethernet'
+              ethernetNetworkType: 'Tagged'
+              networkNames:
+                - 'TestNetwork_1'
+                - 'TestNetwork_2'
+              logicalPortConfigInfos:
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 1
+                          type: 'Enclosure'
+                        - relativeValue: 82
+                          type: 'Port'
+                        - relativeValue: 3
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 2
+                          type: 'Enclosure'
+                        - relativeValue: 82
+                          type: 'Port'
+                        - relativeValue: 6
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 1
+                          type: 'Enclosure'
+                        - relativeValue: 87
+                          type: 'Port'
+                        - relativeValue: 3
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 2
+                          type: 'Enclosure'
+                        - relativeValue: 87
+                          type: 'Port'
+                        - relativeValue: 6
+                          type: 'Bay'
+            - name: 'e23 uplink set1'
+              mode: 'Auto'
+              networkType: 'Ethernet'
+              ethernetNetworkType: 'Untagged'
+              networkNames:
+                - 'mgmt_nw'
+              logicalPortConfigInfos:
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 1
+                          type: 'Enclosure'
+                        - relativeValue: 62
+                          type: 'Port'
+                        - relativeValue: 3
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 2
+                          type: 'Enclosure'
+                        - relativeValue: 62
+                          type: 'Port'
+                        - relativeValue: 6
+                          type: 'Bay'
+          interconnectBaySet: 3
+          enclosureIndexes: [1,2,3]
+          redundancyType: "HighlyAvailable"
+          interconnectMapTemplate:
+            interconnectMapEntryTemplates:
+              - enclosureIndex: 3
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 3
+                          type: "Enclosure"
+                        - relativeValue: 6
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 2
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 2
+                          type: "Enclosure"
+                        - relativeValue: 6
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_1 }}"
+              - enclosureIndex: 2
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 2
+                          type: "Enclosure"
+                        - relativeValue: 3
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 3
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 3
+                          type: "Enclosure"
+                        - relativeValue: 3
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 1
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 1
+                          type: "Enclosure"
+                        - relativeValue: 6
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 1
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 1
+                          type: "Enclosure"
+                        - relativeValue: 3
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_1 }}"
+               # Alternatively you can inform permittedInterconnectTypeUri
+      delegate_to: localhost
+      with_items:
+        - { name: 'LIG' }
+        - { name: 'Test Logical Interconnect Group' }
+ 
+    - name: Do nothing with the Logical Interconnect Group when no changes are provided
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: 'Test Logical Interconnect Group'
+          enclosureType: 'SY12000'
+          internalNetworkNames:
+            - 'TestNetwork_3'
+          uplinkSets: 
+            - name: 'e23 uplink set'
+              mode: 'Auto'
+              networkType: 'Ethernet'
+              ethernetNetworkType: 'Tagged'
+              networkNames:
+                - 'TestNetwork_1'
+                - 'TestNetwork_2'
+              logicalPortConfigInfos:
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 1
+                          type: 'Enclosure'
+                        - relativeValue: 82
+                          type: 'Port'
+                        - relativeValue: 3
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 2
+                          type: 'Enclosure'
+                        - relativeValue: 82
+                          type: 'Port'
+                        - relativeValue: 6
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 1
+                          type: 'Enclosure'
+                        - relativeValue: 87
+                          type: 'Port'
+                        - relativeValue: 3
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 2
+                          type: 'Enclosure'
+                        - relativeValue: 87
+                          type: 'Port'
+                        - relativeValue: 6
+                          type: 'Bay'
+            - name: 'e23 uplink set1'
+              mode: 'Auto'
+              networkType: 'Ethernet'
+              ethernetNetworkType: 'Untagged'
+              networkNames:
+                - 'mgmt_nw'
+              logicalPortConfigInfos:
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 1
+                          type: 'Enclosure'
+                        - relativeValue: 62
+                          type: 'Port'
+                        - relativeValue: 3
+                          type: 'Bay'
+               - desiredSpeed: 'Auto'
+                 logicalLocation:
+                      locationEntries:
+                        - relativeValue: 2
+                          type: 'Enclosure'
+                        - relativeValue: 62
+                          type: 'Port'
+                        - relativeValue: 6
+                          type: 'Bay'
+          interconnectBaySet: 3
+          enclosureIndexes: [1,2,3]
+          redundancyType: "HighlyAvailable"
+          interconnectMapTemplate:
+            interconnectMapEntryTemplates:
+              - enclosureIndex: 3
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 3
+                          type: "Enclosure"
+                        - relativeValue: 6
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 2
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 2
+                          type: "Enclosure"
+                        - relativeValue: 6
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_1 }}"
+              - enclosureIndex: 2
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 2
+                          type: "Enclosure"
+                        - relativeValue: 3
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 3
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 3
+                          type: "Enclosure"
+                        - relativeValue: 3
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 1
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 1
+                          type: "Enclosure"
+                        - relativeValue: 6
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_2 }}"
+              - enclosureIndex: 1
+                logicalLocation:
+                    locationEntries:
+                        - relativeValue: 1
+                          type: "Enclosure"
+                        - relativeValue: 3
+                          type: "Bay"
+                permittedInterconnectTypeName: "{{ permitted_interconnect_type_name_1 }}"
+      delegate_to: localhost
+
+    - name: Update the Logical Interconnect Group by adding an uplink set "e23 uplink set2" with an Ethernet network
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: 'Test Logical Interconnect Group'
+          enclosureType: 'SY12000'
+          uplinkSets:
+            - name: 'e23 uplink set2'
+              mode: 'Auto'
+              networkType: 'Ethernet'
+              networkNames:
+                - 'TestNetwork_5'
+              logicalPortConfigInfos:
+                - desiredSpeed: 'Auto'
+                  logicalLocation:
+                      locationEntries:
+                        - relativeValue: 3
+                          type: "Bay"
+                        - relativeValue: 67
+                          type: "Port"
+                        - relativeValue: 1
+                          type: "Enclosure"
+      delegate_to: localhost
+
+    # Below task is supported only with OneView 3.10
+    - name: Update the Logical Interconnect Group with two scopes
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: 'Test Logical Interconnect Group'
+          scopeUris: "{{ scope_uris }}"
+      delegate_to: localhost
+      when: currentVersion >= '300' and currentVersion <= '500'
+
+    - name: Rename the Logical Interconnect Group to 'Updated Logical Interconnect Group'
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: 'Test Logical Interconnect Group'
+          newName: 'Updated Logical Interconnect Group'
+      delegate_to: localhost
+
+    - name: Delete the Logical Interconnect Group
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: absent
+        data:
+          name: 'Updated Logical Interconnect Group'
+      delegate_to: localhost
+      register: deleted
+
+    - name: Do nothing when the Logical Interconnect Group is absent
+      oneview_logical_interconnect_group:
+        config: "{{ config }}"
+        state: absent
+        data:
+          name: 'Updated Logical Interconnect Group'
+      delegate_to: localhost
+      register: deleted

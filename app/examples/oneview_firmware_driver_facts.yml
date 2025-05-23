@@ -1,0 +1,63 @@
+###
+# Copyright (2021) Hewlett Packard Enterprise Development LP
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###
+---
+- hosts: all
+  vars:
+    config: "{{ playbook_dir }}/oneview_config.json"
+  tasks:
+    - name: Gather facts about all Firmware Drivers
+      oneview_firmware_driver_facts:
+        config: "{{ config }}"
+      delegate_to: localhost
+
+    - debug: var=firmware_drivers
+
+    - name: Gather paginated, filtered and sorted facts about Firmware Drivers
+      oneview_firmware_driver_facts:
+        config: "{{ config }}"
+        params:
+          start: 0
+          count: 3
+          sort: 'name:descending'
+      delegate_to: localhost
+
+    - debug: var=firmware_drivers
+
+    - name: Gather facts about a Firmware Driver by name
+      oneview_firmware_driver_facts:
+        config: "{{ config }}"
+        name: "Service Pack for Synergy"
+      delegate_to: localhost
+
+    - debug: var=firmware_drivers
+
+    - name: Gather facts about a Firmware Driver by name and version
+      oneview_firmware_driver_facts:
+        config: "{{ config }}"
+        name: "Service Pack for Synergy"
+        version: "SY-2021.02.01"
+      delegate_to: localhost
+
+    - debug: var=firmware_drivers
+
+    - name: Gather facts about Firmware Driver with options
+      oneview_firmware_driver_facts:
+        config: "{{ config }}"
+        options:
+          - schema
+      delegate_to: localhost
+
+    - debug: var=schema

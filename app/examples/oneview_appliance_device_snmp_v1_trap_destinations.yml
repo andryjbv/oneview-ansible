@@ -1,0 +1,71 @@
+###
+# Copyright (2016-2021) Hewlett Packard Enterprise Development LP
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###
+# "name" attribute is mandatory in module params and user should provide destination address for name
+---
+- hosts: all
+  vars:
+    config: "{{ playbook_dir }}/oneview_config.json"
+    destination_address: "1.1.1.2"
+  tasks:
+    - name: Create or Update an Appliance Device SNMPv1 Trap Destination by Destination Address
+      oneview_appliance_device_snmp_v1_trap_destinations:
+        config: "{{ config }}"
+        state: present
+        name: "{{ destination_address }}"
+        data:
+          communityString: "public"
+          destination: "{{ destination_address }}"
+          port: 162
+      delegate_to: localhost
+
+    - debug:
+        var: appliance_device_snmp_v1_trap_destinations
+
+    - name: Ensure Appliance Device SNMPv1 Trap Destination by Destination Address is already present
+      oneview_appliance_device_snmp_v1_trap_destinations:
+        config: "{{ config }}"
+        state: present
+        name: "{{ destination_address }}"
+        data:
+          communityString: "public"
+          destination: "{{ destination_address }}"
+          port: 162
+      delegate_to: localhost
+
+    - name: Update Appliance Device SNMPv1 Trap Destination by port
+      oneview_appliance_device_snmp_v1_trap_destinations:
+        config: "{{ config }}"
+        state: present
+        name: "{{ destination_address }}"
+        data:
+          communityString: "public"
+          destination: "{{ destination_address }}"
+          port: 165
+      delegate_to: localhost
+
+    - name: Delete an Appliance Device SNMPv1 Trap Destination by Destination Address
+      oneview_appliance_device_snmp_v1_trap_destinations:
+        config: "{{ config }}"
+        state: absent
+        name: "{{ destination_address }}"
+      delegate_to: localhost
+
+    - name: Delete an Appliance Device SNMPv1 Trap Destination when already absent
+      oneview_appliance_device_snmp_v1_trap_destinations:
+        config: "{{ config }}"
+        state: absent
+        name: "{{ destination_address }}"
+      delegate_to: localhost

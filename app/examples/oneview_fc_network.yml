@@ -1,0 +1,134 @@
+###
+# Copyright (2016-2020) Hewlett Packard Enterprise Development LP
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###
+---
+- hosts: all
+  vars:
+    config: "{{ playbook_dir }}/oneview_config.json"
+    contents: "{{lookup('file', config)}}"
+    network_name: 'Ansible Test FC Network'
+    network_scope_uris:
+      - '/rest/scopes/d0324c4b-56c9-485b-b7dd-8f6218a4b5bb'
+      - '/rest/scopes/9422ce05-dc39-4358-b723-c8c825eae412'
+  tasks:
+
+    - name: Get currentVersion from URL
+      oneview_version_facts:
+        config: "{{ config }}" 
+      delegate_to: localhost
+      when: contents.api_version|length == 0
+      register: version
+
+    - name: Print currentVersion if api version is not specified in config file
+      set_fact: 
+        currentVersion: "{{ version.ansible_facts.version.currentVersion | int }}"
+      when: contents.api_version|length == 0
+
+    - name: Print currentVersion if api version is specified in config file
+      set_fact: 
+        currentVersion: contents.api_version | string
+      when: contents.api_version|length != 0
+
+    - name: Create a Fibre Channel Network
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: present
+        validate_etag: False
+        data:
+          name: "{{ item }}"
+          fabricType: 'FabricAttach'
+          linkStabilityTime: '30'
+          autoLoginRedistribution: true
+          type: "fc-networkV4"
+          bandwidth:
+              maximumBandwidth: 2000
+              typicalBandwidth: 1000
+      delegate_to: localhost
+      register: fc_network_1
+      with_items:
+         - "{{ network_name }}"
+         - "{{ network_name }} (1)"
+         - "{{ network_name }} (2)"
+
+    - name: Do nothing with the Fibre Channel Network when no changes are provided
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: "{{ network_name }}"
+          fabricType: 'FabricAttach'
+          linkStabilityTime: '30'
+          autoLoginRedistribution: true
+          bandwidth:
+              maximumBandwidth: 2000
+              typicalBandwidth: 1000
+      delegate_to: localhost
+
+    - name: Update the Fibre Channel Network changing the attribute autoLoginRedistribution to True
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: "{{ network_name }}"
+          autoLoginRedistribution: False
+          fabricType: 'FabricAttach'
+          linkStabilityTime: '30'
+          bandwidth:
+              maximumBandwidth: 3000
+              typicalBandwidth: 2000
+      delegate_to: localhost
+     
+    # This feature is available only till OneView 3.10
+    - name: Update the FC Network with two scopes
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: present
+        data:
+          name: "{{ network_name }}"
+          scopeUris: "{{ network_scope_uris }}"
+      when: currentVersion >= '300' and currentVersion <= '500'
+      delegate_to: localhost
+
+    - name: Delete the Fibre Channel Network
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: absent
+        data:
+          name: "{{ network_name }}"
+      delegate_to: localhost
+      register: deleted
+
+    - name: Do nothing when Fibre Channel Network is absent
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: absent
+        data:
+          name: "{{ network_name }}"
+      delegate_to: localhost
+      register: deleted
+
+    - debug: var=fc_network_1.results[1].ansible_facts.fc_network.uri
+
+    # This feature is available only from OneView 5.20
+    - name: Delete Fibre Channel Networks in bulk
+      oneview_fc_network:
+        config: "{{ config }}"
+        state: absent
+        data:
+          networkUris:
+            - "{{ fc_network_1.results[1].ansible_facts.fc_network.uri }}"
+            - "{{ fc_network_1.results[2].ansible_facts.fc_network.uri }}"
+      delegate_to: localhost
+      when: currentVersion >= '1600'

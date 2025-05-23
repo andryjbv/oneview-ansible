@@ -1,0 +1,90 @@
+###
+# Copyright (2016-2021) Hewlett Packard Enterprise Development LP
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###
+
+---
+- hosts: all
+  vars:
+    config: "{{ playbook_dir }}/oneview_config.json"
+    server_hardware_type_name_renamed: 'DL380p Gen8 1 (new name)'
+    variant: 'Synergy'
+    contents: "{{lookup('file', config)}}"
+  tasks:
+    # This is only supported on appliances which support rack mounted servers.
+    - name: Add a Server Hardware to create a Server Hardware Type (Prerequisite)
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: present
+        data:
+            hostname : '{{ contents.server_hardware_hostname }}'
+            username : '{{ contents.server_hardware_username }}'
+            password : '{{ contents.server_hardware_password }}'
+            force : false
+            licensingIntent: "OneView"
+            configurationState: "Managed"
+      delegate_to: localhost
+      when: variant == 'C7000'
+
+    - name: Gather facts about all Server Hardware Types
+      oneview_server_hardware_type_facts:
+         config: "{{ config }}"
+      delegate_to: localhost
+
+    - name: Update the Server Hardware Type description
+      oneview_server_hardware_type:
+        config: "{{ config }}"
+        state: present
+        data:
+            name: "{{ server_hardware_types[0]['name'] }}"
+            description: "New Description"
+      delegate_to: localhost
+
+    - name: Rename the Server Hardware Type
+      oneview_server_hardware_type:
+        config: "{{ config }}"
+        state: present
+        data:
+            name: "{{ server_hardware_types[0]['name'] }}"
+            newName: '{{ server_hardware_type_name_renamed }}'
+      delegate_to: localhost
+
+    - name: Rename the Server Hardware Type to original
+      oneview_server_hardware_type:
+        config: "{{ config }}"
+        state: present
+        data:
+            name: '{{ server_hardware_type_name_renamed }}'
+            newName: "{{ server_hardware_types[0]['name'] }}"
+      delegate_to: localhost
+
+    # This is only supported on appliances which support rack mounted servers.
+    - name: Remove the Server Hardware to be able to delete the Server Hardware Type (Prerequisite)
+      oneview_server_hardware:
+        config: "{{ config }}"
+        state: absent
+        data:
+            name: '{{ contents.server_hardware_hostname }}'
+      delegate_to: localhost
+      when: variant == 'C7000'
+
+    # This is only supported on appliances which support rack mounted servers.
+    - name: Delete the Server Hardware Type
+      oneview_server_hardware_type:
+        config: "{{ config }}"
+        state: absent
+        data:
+            name: "{{ server_hardware_types[0]['name'] }}"
+      delegate_to: localhost
+      when: variant == 'C7000'
