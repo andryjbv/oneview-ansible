@@ -9,9 +9,11 @@ set -e
 ###############################################
 # TODO: Install project dependencies if needed based on relevant config/lock files in the repo.
 # Note that we are developing the project, even if dependencies have been installed before, we need to install again to accommodate the changes we made.
-# <dependency-installation-commands>
-# TODO: Configure project and environment variables
-# <config-commands>
+pip install -r app/requirements.txt
+pip install -r app/test_requirements.txt
+
+export ANSIBLE_LIBRARY=/app/app/library
+export ANSIBLE_MODULE_UTILS=/app/app/library/module_utils
 
 ###############################################
 # BUILD
