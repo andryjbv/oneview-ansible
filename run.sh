@@ -9,6 +9,9 @@ set +e
 # Run entire test suite
 run_all_tests() {
   echo "Running all tests..."
+  export ANSIBLE_LIBRARY=app/library
+  export ANSIBLE_MODULE_UTILS=$ANSIBLE_LIBRARY/module_utils
+  export PYTHONPATH="stubs:app/test:$ANSIBLE_LIBRARY:$PYTHONPATH"
   pytest -v app/test
 }
 
@@ -16,6 +19,9 @@ run_all_tests() {
 run_selected_tests() {
   local test_files=("$@")
   echo "Running selected tests: ${test_files[@]}"
+  export ANSIBLE_LIBRARY=app/library
+  export ANSIBLE_MODULE_UTILS=$ANSIBLE_LIBRARY/module_utils
+  export PYTHONPATH="stubs:app/test:$ANSIBLE_LIBRARY:$PYTHONPATH"
   pytest -v "${test_files[@]}"
 }
 # --- END CONFIGURATION SECTION ---
